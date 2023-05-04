@@ -7,7 +7,7 @@ Given an item on the OBS canvas that has been cropped to fit a layout, this util
 ### Example
 Without Nifty Crop Mover | With Nifty Crop Mover
 -------------------|--------------
-![Before](media/crop-demo-before.gif)|![After](media/crop-demo-after.gif)
+![without-crop-mover](https://user-images.githubusercontent.com/11876694/236348716-dcb98652-c95a-411b-a22f-326bbbfa2b89.gif)|![with-crop-mover](https://user-images.githubusercontent.com/11876694/236348774-6a828a2a-f340-4144-befd-a6a91bea0de3.gif)
 
 ## Installation
 1. Download or clone this repo to your local computer
