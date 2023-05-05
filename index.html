@@ -9,9 +9,11 @@
   <div id="app" @wheel.prevent="handleWheel">
     <template v-if="!socketConnected">
       <div v-if="loginError!==''" id="error">{{loginError}}</div>
-      <div class="form-input">Socket Server <input v-model="socketserver" /></div>
-      <div class="form-input">Socket Password <input v-model="socketpassword" /></div>
-      <button @click="socketLogin">Login</button>
+      <form @submit.prevent="socketLogin">
+        <div class="form-input">Socket Server <input v-model="socketserver" /></div>
+        <div class="form-input">Socket Password <input v-model="socketpassword" /></div>
+        <button>Login</button>
+      </form>
     </template>
     <template v-else>
       <div id="help">
