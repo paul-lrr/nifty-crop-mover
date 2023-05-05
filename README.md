@@ -9,11 +9,14 @@ Without Nifty Crop Mover | With Nifty Crop Mover
 -------------------|--------------
 ![without-crop-mover](https://user-images.githubusercontent.com/11876694/236348716-dcb98652-c95a-411b-a22f-326bbbfa2b89.gif)|![with-crop-mover](https://user-images.githubusercontent.com/11876694/236348774-6a828a2a-f340-4144-befd-a6a91bea0de3.gif)
 
+## Requirements
+- OBS Websocket v5.1.0 (included with OBS v29)
+
 ## Installation
 1. Download or clone this repo to your local computer
 2. Open OBS
 3. Go to Tools->WebSocket Server Settings and make sure the server is enabled and the password is set
-4. Either a) Add the index.html file as a Custom Browser Dock by selecting "Custom Browser Docks..." or launch the index.html file directly
+4. Either a) Add the index.html file as a Custom Browser Dock by selecting `Custom Browser Docks...` from the `Docks` menu or b) launch the `index.html` file directly
 5. Input your WebSocket server address and password. The default server address of `ws://localhost:4455` should work unless you are trying to access an OBS instance on another system
 
 
