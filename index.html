@@ -1,0 +1,46 @@
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+  <title>Nifty Crop Mover</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp" rel="stylesheet" />
+</head>
+
+<body>
+  <div id="app" @wheel.prevent="handleWheel">
+    <template v-if="!socketConnected">
+      <div v-if="loginError!==''" id="error">{{loginError}}</div>
+      <div class="form-input">Socket Server <input v-model="socketserver" /></div>
+      <div class="form-input">Socket Password <input v-model="socketpassword" /></div>
+      <button @click="socketLogin">Login</button>
+    </template>
+    <template v-else>
+      <div id="help">
+        <a class="material-icons-sharp">help_outline</a>
+        <div class="help-text">
+          <a class="material-icons-sharp">help_outline</a>
+          <p>Mouse Wheel - Zoom in/out</p>
+          <p>Ctrl - Precise movement</p>
+          <p>Shift - Scale from center</p>
+        </div>
+      </div>
+      <div id="percent">
+        <input type="number" :value="percent" @blur="resizeTo($event.target.value)" /><span class="percent_sign">%</span
+        ><a class="material-icons-sharp button" title="scale to 100%" @click="resizeTo(100)">photo_size_select_actual</a
+        ><a class="material-icons-sharp button" title="scale to frame" @click="resizeTo(1)">photo_size_select_large</a>
+      </div>
+      <div id="stage" :style="stage" :class="{slow:slow,centerScale:centerScale}">
+        <move-resize v-if="appInfo.item.width" ref="moveResize" :frame="frame" :item="item" :oversize="oversize" @set-mode="handleMode"></move-resize>
+        <div v-else id="no-item">Please choose an item by clicking on it in OBS or selecting it in the menu below</div>
+      </div>
+      <div id="select-block"><item-select v-if="itemList" :item-list="itemList" :value="targetItem" @input="targetItem=$event"></item-select><button @click="getAllItemsobs">↻</button></div>
+    </template>
+  </div>
+
+  <script src="https://unpkg.com/obs-websocket-js"></script>
+  <script src="https://cdn.jsdelivr.net/lodash/4.15.0/lodash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.js"></script>
+  <script>
+    const obs = new OBSWebSocket();
+  </script>
+  <script src="js/nifty-crop-mover.vue.js"></script>
+</body>
