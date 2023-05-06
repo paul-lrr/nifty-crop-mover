@@ -224,13 +224,14 @@ let app = new Vue({
           bottom: this.item.bottom,
           left: this.item.left,
         };
-        bounds = this.scaleBox(bounds, this.slow ? [rotated[0] / this.stageRatio, rotated[1] / this.stageRatio] : [rotated[0], rotated[1]]);
-        bounds = this.checkBounds(bounds, { x: this.mode.x, y: this.mode.y });
         if (this.centerScale) {
           let scaleMode = { x: this.mode.x === "right" ? "left" : "right", y: this.mode.y === "bottom" ? "top" : "bottom" };
           bounds = this.scaleBox(bounds, this.slow ? [-rotated[0] / this.stageRatio, -rotated[1] / this.stageRatio] : [-rotated[0], -rotated[1]], scaleMode);
           bounds = this.checkBounds(bounds, scaleMode);
-        }
+        } else {
+          bounds = this.scaleBox(bounds, this.slow ? [rotated[0] / this.stageRatio, rotated[1] / this.stageRatio] : [rotated[0], rotated[1]]);
+          bounds = this.checkBounds(bounds, { x: this.mode.x, y: this.mode.y });
+	}
         this.item = bounds;
         this.setCropThrottle();
       }
