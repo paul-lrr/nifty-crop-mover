@@ -231,7 +231,10 @@ let app = new Vue({
           this.scaleBox([x_mouse_mov, y_mouse_mov]);
           // Center Scale is done in two seperate steps to allow the user to keep scaling
           if (this.centerScale) {
-            this.scaleBox([-x_mouse_mov, -y_mouse_mov],  { x: this.mode.x === "right" ? "left" : "right", y: this.mode.y === "bottom" ? "top" : "bottom" })
+            this.scaleBox([-x_mouse_mov, -y_mouse_mov], {
+              x: this.mode.x === "right" ? "left" : "right",
+              y: this.mode.y === "bottom" ? "top" : "bottom"
+            })
           }
           // Push change to OBS
           this.setCropThrottle();
@@ -275,13 +278,13 @@ let app = new Vue({
       if (scaleMode.x.toString() === "right") {
         this.item.right += delta[0];
       }
-      if (scaleMode.x.toString() === "left" ) {
+      if (scaleMode.x.toString() === "left") {
         this.item.left += delta[0];
       }
-      if (scaleMode.y.toString() === "bottom" ) {
+      if (scaleMode.y.toString() === "bottom") {
         this.item.bottom += delta[1];
       }
-      if (scaleMode.y.toString() === "top" ) {
+      if (scaleMode.y.toString() === "top") {
         this.item.top += delta[1];
       }
     },
@@ -431,28 +434,30 @@ let app = new Vue({
     setCropThrottle: _.throttle(function () {
       this.setCropObs();
     }, 30),
-    fitToFrame() {
-      this.scaleBox([Infinity, Infinity], {x: "left", y: "top"});
-      this.scaleBox([Infinity, -Infinity], {x: "left", y: "bottom"});
-      this.scaleBox([-Infinity, -Infinity], {x: "right", y: "bottom"});
-      this.scaleBox([-Infinity, Infinity], {x: "right", y: "top"});
-      this.setCropThrottle();
-    },
     resizeTo(percent) {
       percent = percent / 100;
-      percent = Math.max(app.appInfo.frame.width / app.appInfo.item.nativeWidth, app.appInfo.frame.height / app.appInfo.item.nativeHeight, percent);
+      console.log(percent)
 
+      // Calculate how much scaling is needed for the resize
+      let delta = this.calculateResize(percent)
+      this.scaleBox(delta, {x: "right", y: "bottom"});
+      this.scaleBox([-delta[0], -delta[1]], {x: "left", y: "top"});
+
+      // Recalculate how much movement is still needed for the resize, but now using the other combinations.
+      // This is needed when becoming smaller and intersecting with the frame during the scaling.
+      delta = this.calculateResize(percent)
+      this.scaleBox([delta[0], -delta[1]], {x: "right", y: "top"});
+      this.scaleBox([-delta[0], -delta[1]], {x: "left", y: "bottom"});
+
+      this.setCropThrottle();
+    },
+    calculateResize(percent) {
       let itemWidth = this.stage.width - this.item.right - this.item.left;
       let itemHeight = this.stage.height - this.item.top - this.item.bottom;
       let newItemWidth = (this.appInfo.item.nativeWidth * percent) / this.stageRatio;
       let newItemHeight = (newItemWidth * this.appInfo.item.height) / this.appInfo.item.width;
 
-      let delta = [(newItemWidth - itemWidth) / 2, (newItemHeight - itemHeight) / 2];
-
-      this.scaleBox(delta, {x: "right", y: "bottom"});
-      this.scaleBox([-delta[0], delta[1]], {x: "left", y: "top"});
-
-      this.setCropThrottle();
+      return [(newItemWidth - itemWidth) / 2, (newItemHeight - itemHeight) / 2];
     },
     async getAllItemsobs() {
       let scenes = (await obs.call("GetSceneList")).scenes.reverse();
