@@ -16,7 +16,7 @@ Vue.component("item-select", {
   methods: {
     handleInput(e) {
       let indexes = e.target.value.split("\uF000");
-      let target = this.flatItemList.find((o) => o.sceneName == indexes[0] && o.sceneItemId == indexes[1]);
+      let target = this.flatItemList.find((o) => o.sceneName.toString() === indexes[0] && o.sceneItemId.toString() === indexes[1]);
       if (target) {
         this.$emit("input", target);
       }
@@ -203,7 +203,7 @@ let app = new Vue({
       this.mode = mode;
     },
     handleMouseMove(e) {
-      // Make sure calculations are only done when need
+      // Make sure calculations are only done when needed
       if (this.mode.action) {
         let rotated = this.rotate(e.movementX, e.movementY, 0, 0, -this.frame.rotateZ);
         let y_mouse_mov = (this.slow ? rotated[1] / this.stageRatio : rotated[1]);
@@ -222,12 +222,13 @@ let app = new Vue({
           this.item.bottom -= y_mouse_mov
           this.item.right -= x_mouse_mov
           this.item.left += x_mouse_mov
+
+          // Push change to OBS
           this.setCropThrottle();
         }
 
         if (this.mode.action.toString() === "scale") {
           this.scaleBox([x_mouse_mov, y_mouse_mov]);
-          this.setCropThrottle();
         }
       }
     },
@@ -244,10 +245,18 @@ let app = new Vue({
 
       // Don't allow the delta to be bigger than the space between item and frame, so it is never smaller than the frame
       // Because allowing it to be smaller than the frame is not allowed in the OBS api.
-      delta[0] = Math.min(this.frame.left - this.item.left, delta[0]);
-      delta[0] = Math.min(this.frame.right - this.item.right, delta[0])
-      delta[1] = Math.min(this.frame.top - this.item.top, delta[1]);
-      delta[1] = Math.min(this.frame.bottom - this.item.bottom, delta[1])
+      if (scaleMode.x.toString() === "left" || this.centerScale) {
+        delta[0] = Math.min(this.frame.left - this.item.left, delta[0]);
+      }
+      if (scaleMode.x.toString() === "right" || this.centerScale) {
+        delta[0] = Math.min(this.frame.right - this.item.right, delta[0])
+      }
+      if (scaleMode.y.toString() === "top" || this.centerScale) {
+        delta[1] = Math.min(this.frame.top - this.item.top, delta[1]);
+      }
+      if (scaleMode.y.toString() === "bottom" || this.centerScale) {
+        delta[1] = Math.min(this.frame.bottom - this.item.bottom, delta[1])
+      }
 
       // Ensure ratio is correct for restricted values.
       delta[1] = Math.min(delta[0] * (this.appInfo.item.height / this.appInfo.item.width), delta[1]);
@@ -258,28 +267,31 @@ let app = new Vue({
         this.item.right += delta[0];
       }
       if (scaleMode.x.toString() === "left" || this.centerScale) {
-        this.item.left +=  delta[0];
+        this.item.left += delta[0];
       }
       if (scaleMode.y.toString() === "bottom" || this.centerScale) {
-        this.item.bottom +=  delta[1];
+        this.item.bottom += delta[1];
       }
       if (scaleMode.y.toString() === "top" || this.centerScale) {
-        this.item.top +=  delta[1];
+        this.item.top += delta[1];
       }
+
+      // Push Changes to OBS
+      this.setCropThrottle();
     },
     handleKeydown(e) {
-      if (e.key == "Control") {
+      if (e.key.toString() === "Control") {
         this.slow = true;
       }
-      if (e.key == "Shift") {
+      if (e.key.toString() === "Shift") {
         this.centerScale = true;
       }
     },
     handleKeyup(e) {
-      if (e.key == "Control") {
+      if (e.key.toString() === "Control") {
         this.slow = false;
       }
-      if (e.key == "Shift") {
+      if (e.key.toString() === "Shift") {
         this.centerScale = false;
       }
     },
@@ -422,8 +434,7 @@ let app = new Vue({
         bottom: this.item.bottom,
         left: this.item.left,
       };
-      bounds = this.setScale(bounds, percent, {x: "right", y: "bottom"});
-      this.item = bounds;
+      this.setScale(bounds, percent, {x: "right", y: "bottom"});
       this.setCropThrottle();
     },
     setScale(bounds, percent, scaleMode) {
@@ -433,13 +444,10 @@ let app = new Vue({
       let newItemHeight = (newItemWidth * this.appInfo.item.height) / this.appInfo.item.width;
       let delta = [(newItemWidth - itemWidth) / 2, (newItemHeight - itemHeight) / 2];
 
-      bounds = this.scaleBox(bounds, delta, scaleMode);
-      bounds = this.scaleBox(bounds, [-delta[0], delta[1]], {x: "left", y: "top"});
-      bounds = this.checkBounds(bounds);
-
-      return bounds;
+      this.centerScale = true;
+      this.scaleBox(delta, scaleMode);
+      this.centerScale = false;
     },
-
     async getAllItemsobs() {
       let scenes = (await obs.call("GetSceneList")).scenes.reverse();
       let itemList = await Promise.all(
