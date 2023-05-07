@@ -203,53 +203,69 @@ let app = new Vue({
       this.mode = mode;
     },
     handleMouseMove(e) {
-      let rotated;
       if (this.mode.action) {
+        let rotated;
         rotated = this.rotate(e.movementX, e.movementY, 0, 0, -this.frame.rotateZ);
-      }
-      if (this.mode.action == "drag") {
-        let bounds = {
-          top: this.item.top + (this.slow ? rotated[1] / this.stageRatio : rotated[1]),
-          right: this.item.right - (this.slow ? rotated[0] / this.stageRatio : rotated[0]),
-          bottom: this.item.bottom - (this.slow ? rotated[1] / this.stageRatio : rotated[1]),
-          left: this.item.left + (this.slow ? rotated[0] / this.stageRatio : rotated[0]),
-        };
-        this.item = this.checkBounds(bounds);
-        this.setCropThrottle();
-      }
-      if (this.mode.action == "scale") {
-        let bounds = {
-          top: this.item.top,
-          right: this.item.right,
-          bottom: this.item.bottom,
-          left: this.item.left,
-        };
-        bounds = this.scaleBox(bounds, this.slow ? [rotated[0] / this.stageRatio, rotated[1] / this.stageRatio] : [rotated[0], rotated[1]]);
-        bounds = this.checkBounds(bounds, { x: this.mode.x, y: this.mode.y });
-        if (this.centerScale) {
-          let scaleMode = { x: this.mode.x === "right" ? "left" : "right", y: this.mode.y === "bottom" ? "top" : "bottom" };
-          bounds = this.scaleBox(bounds, this.slow ? [-rotated[0] / this.stageRatio, -rotated[1] / this.stageRatio] : [-rotated[0], -rotated[1]], scaleMode);
-          bounds = this.checkBounds(bounds, scaleMode);
+        let y_mouse_mov = (this.slow ? rotated[1] / this.stageRatio : rotated[1]);
+        let x_mouse_mov = (this.slow ? rotated[0] / this.stageRatio : rotated[0]);
+
+        if (this.mode.action == "drag") {
+          x_mouse_mov = Math.min(this.frame.left - this.item.left, x_mouse_mov);
+          x_mouse_mov = Math.max(this.item.right - this.frame.right, x_mouse_mov)
+          y_mouse_mov = Math.min(this.frame.top - this.item.top, y_mouse_mov);
+          y_mouse_mov = Math.max(this.item.bottom - this.frame.bottom, y_mouse_mov)
+
+          this.item.top += y_mouse_mov
+          this.item.bottom -= y_mouse_mov
+          this.item.right -= x_mouse_mov
+          this.item.left += x_mouse_mov
+          this.setCropThrottle();
         }
-        this.item = bounds;
-        this.setCropThrottle();
+
+        if (this.mode.action == "scale") {
+          let bounds = {
+            top: this.item.top,
+            right: this.item.right,
+            bottom: this.item.bottom,
+            left: this.item.left,
+          };
+
+          bounds = this.scaleBox(bounds, [x_mouse_mov, y_mouse_mov]);
+          // bounds = this.checkBounds(bounds, {x: this.mode.x, y: this.mode.y});
+          // this.item = bounds;
+          this.setCropThrottle();
+        }
       }
     },
     scaleBox(bounds, delta, scaleMode = { x: this.mode.x, y: this.mode.y }) {
       delta[1] = delta[0] * (this.appInfo.item.height / this.appInfo.item.width); //lock aspect ratio
-      if (scaleMode.x == "right") {
-        bounds.right = bounds.right - delta[0];
-        if (scaleMode.y == "bottom") {
-          bounds.bottom = bounds.bottom - delta[1];
-        } else if (scaleMode.y == "top") {
-          bounds.top = bounds.top - delta[1];
+      if (this.centerScale) {
+        delta[1] = delta[1] / 2;
+        delta[0] = delta[0] / 2;
+        if (scaleMode.x == "right") {
+          delta[0] = -delta[0];
+          delta[1] = -delta[1];
         }
-      } else if (scaleMode.x == "left") {
-        bounds.left = bounds.left + delta[0];
-        if (scaleMode.y == "bottom") {
-          bounds.bottom = bounds.bottom + delta[1];
-        } else if (scaleMode.y == "top") {
-          bounds.top = bounds.top + delta[1];
+
+        this.item.left = Math.min(this.item.left + delta[0], this.frame.left);
+        this.item.right  = Math.min(this.item.right + delta[0], this.frame.right);
+        this.item.bottom = Math.min(this.item.bottom + delta[1], this.frame.bottom);
+        this.item.top  = Math.min(this.item.top + delta[1], this.frame.top);
+      } else {
+        if (scaleMode.x == "right") {
+          bounds.right = bounds.right - delta[0];
+          if (scaleMode.y == "bottom") {
+            bounds.bottom = bounds.bottom - delta[1];
+          } else if (scaleMode.y == "top") {
+            bounds.top = bounds.top - delta[1];
+          }
+        } else if (scaleMode.x == "left") {
+          bounds.left = bounds.left + delta[0];
+          if (scaleMode.y == "bottom") {
+            bounds.bottom = bounds.bottom + delta[1];
+          } else if (scaleMode.y == "top") {
+            bounds.top = bounds.top + delta[1];
+          }
         }
       }
 
