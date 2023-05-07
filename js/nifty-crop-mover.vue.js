@@ -233,10 +233,15 @@ let app = new Vue({
           if (this.centerScale) {
             this.scaleBox([-x_mouse_mov, -y_mouse_mov],  { x: this.mode.x === "right" ? "left" : "right", y: this.mode.y === "bottom" ? "top" : "bottom" })
           }
+          // Push change to OBS
+          this.setCropThrottle();
         }
       }
     },
-    scaleBox(delta, scaleMode = {x: this.mode.x, y: this.mode.y}) {
+    scaleBox(deltaIn, scaleMode = {x: this.mode.x, y: this.mode.y}) {
+      // Create a copy of delta, so that we don't alter the variable passed to the function
+      let delta = deltaIn.slice(0, 1)
+
       // As images are generally more wide than tall, we only use horizontal mouse movement.
       // This is purely for user experience.
       delta[1] = delta[0] * (this.appInfo.item.height / this.appInfo.item.width);
@@ -279,9 +284,6 @@ let app = new Vue({
       if (scaleMode.y.toString() === "top" ) {
         this.item.top += delta[1];
       }
-
-      // Push Changes to OBS
-      this.setCropThrottle();
     },
     handleKeydown(e) {
       if (e.key.toString() === "Control") {
@@ -429,28 +431,28 @@ let app = new Vue({
     setCropThrottle: _.throttle(function () {
       this.setCropObs();
     }, 30),
+    fitToFrame() {
+      this.scaleBox([Infinity, Infinity], {x: "left", y: "top"});
+      this.scaleBox([Infinity, -Infinity], {x: "left", y: "bottom"});
+      this.scaleBox([-Infinity, -Infinity], {x: "right", y: "bottom"});
+      this.scaleBox([-Infinity, Infinity], {x: "right", y: "top"});
+      this.setCropThrottle();
+    },
     resizeTo(percent) {
       percent = percent / 100;
       percent = Math.max(app.appInfo.frame.width / app.appInfo.item.nativeWidth, app.appInfo.frame.height / app.appInfo.item.nativeHeight, percent);
-      let bounds = {
-        top: this.item.top,
-        right: this.item.right,
-        bottom: this.item.bottom,
-        left: this.item.left,
-      };
-      this.setScale(bounds, percent, {x: "right", y: "bottom"});
-      this.setCropThrottle();
-    },
-    setScale(bounds, percent, scaleMode) {
-      let itemWidth = this.stage.width - bounds.right - bounds.left;
-      let itemHeight = this.stage.height - bounds.top - bounds.bottom;
+
+      let itemWidth = this.stage.width - this.item.right - this.item.left;
+      let itemHeight = this.stage.height - this.item.top - this.item.bottom;
       let newItemWidth = (this.appInfo.item.nativeWidth * percent) / this.stageRatio;
       let newItemHeight = (newItemWidth * this.appInfo.item.height) / this.appInfo.item.width;
+
       let delta = [(newItemWidth - itemWidth) / 2, (newItemHeight - itemHeight) / 2];
 
-      this.centerScale = true;
-      this.scaleBox(delta, scaleMode);
-      this.centerScale = false;
+      this.scaleBox(delta, {x: "right", y: "bottom"});
+      this.scaleBox([-delta[0], delta[1]], {x: "left", y: "top"});
+
+      this.setCropThrottle();
     },
     async getAllItemsobs() {
       let scenes = (await obs.call("GetSceneList")).scenes.reverse();
