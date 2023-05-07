@@ -229,6 +229,10 @@ let app = new Vue({
 
         if (this.mode.action.toString() === "scale") {
           this.scaleBox([x_mouse_mov, y_mouse_mov]);
+          // Center Scale is done in two seperate steps to allow the user to keep scaling
+          if (this.centerScale) {
+            this.scaleBox([-x_mouse_mov, -y_mouse_mov],  { x: this.mode.x === "right" ? "left" : "right", y: this.mode.y === "bottom" ? "top" : "bottom" })
+          }
         }
       }
     },
@@ -245,16 +249,16 @@ let app = new Vue({
 
       // Don't allow the delta to be bigger than the space between item and frame, so it is never smaller than the frame
       // Because allowing it to be smaller than the frame is not allowed in the OBS api.
-      if (scaleMode.x.toString() === "left" || this.centerScale) {
+      if (scaleMode.x.toString() === "left") {
         delta[0] = Math.min(this.frame.left - this.item.left, delta[0]);
       }
-      if (scaleMode.x.toString() === "right" || this.centerScale) {
+      if (scaleMode.x.toString() === "right") {
         delta[0] = Math.min(this.frame.right - this.item.right, delta[0])
       }
-      if (scaleMode.y.toString() === "top" || this.centerScale) {
+      if (scaleMode.y.toString() === "top") {
         delta[1] = Math.min(this.frame.top - this.item.top, delta[1]);
       }
-      if (scaleMode.y.toString() === "bottom" || this.centerScale) {
+      if (scaleMode.y.toString() === "bottom") {
         delta[1] = Math.min(this.frame.bottom - this.item.bottom, delta[1])
       }
 
@@ -263,16 +267,16 @@ let app = new Vue({
       delta[0] = Math.min(delta[1] / (this.appInfo.item.height / this.appInfo.item.width), delta[0]);
 
       // Set item sizes depending on scale mode.
-      if (scaleMode.x.toString() === "right" || this.centerScale) {
+      if (scaleMode.x.toString() === "right") {
         this.item.right += delta[0];
       }
-      if (scaleMode.x.toString() === "left" || this.centerScale) {
+      if (scaleMode.x.toString() === "left" ) {
         this.item.left += delta[0];
       }
-      if (scaleMode.y.toString() === "bottom" || this.centerScale) {
+      if (scaleMode.y.toString() === "bottom" ) {
         this.item.bottom += delta[1];
       }
-      if (scaleMode.y.toString() === "top" || this.centerScale) {
+      if (scaleMode.y.toString() === "top" ) {
         this.item.top += delta[1];
       }
 
