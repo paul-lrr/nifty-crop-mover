@@ -38,7 +38,7 @@ Vue.component("move-resize", {
 	</div>`,
   props: ["frame", "item", "oversize"],
   data: () => ({
-    frameOrigin: { left: 0, top: 0 },
+    frameOrigin: {left: 0, top: 0},
   }),
   computed: {
     itemOrigin() {
@@ -124,7 +124,7 @@ let app = new Vue({
         height: false,
         nativeWidth: false,
         nativeHeight: false,
-        scale: { x: 1, y: 1 },
+        scale: {x: 1, y: 1},
       },
       target: false,
     },
@@ -203,18 +203,21 @@ let app = new Vue({
       this.mode = mode;
     },
     handleMouseMove(e) {
+      // Make sure calculations are only done when need
       if (this.mode.action) {
-        let rotated;
-        rotated = this.rotate(e.movementX, e.movementY, 0, 0, -this.frame.rotateZ);
+        let rotated = this.rotate(e.movementX, e.movementY, 0, 0, -this.frame.rotateZ);
         let y_mouse_mov = (this.slow ? rotated[1] / this.stageRatio : rotated[1]);
         let x_mouse_mov = (this.slow ? rotated[0] / this.stageRatio : rotated[0]);
 
-        if (this.mode.action == "drag") {
+        if (this.mode.action.toString() === "drag") {
+          // Ensure horizontal or vertical movement is not bigger than the space between frame and item.
+          // Because allowing it to move in the frame is not allowed in the OBS api.
           x_mouse_mov = Math.min(this.frame.left - this.item.left, x_mouse_mov);
           x_mouse_mov = Math.max(this.item.right - this.frame.right, x_mouse_mov)
           y_mouse_mov = Math.min(this.frame.top - this.item.top, y_mouse_mov);
           y_mouse_mov = Math.max(this.item.bottom - this.frame.bottom, y_mouse_mov)
 
+          // Apply changes
           this.item.top += y_mouse_mov
           this.item.bottom -= y_mouse_mov
           this.item.right -= x_mouse_mov
@@ -222,86 +225,48 @@ let app = new Vue({
           this.setCropThrottle();
         }
 
-        if (this.mode.action == "scale") {
-          let bounds = {
-            top: this.item.top,
-            right: this.item.right,
-            bottom: this.item.bottom,
-            left: this.item.left,
-          };
-
-          bounds = this.scaleBox(bounds, [x_mouse_mov, y_mouse_mov]);
-          // bounds = this.checkBounds(bounds, {x: this.mode.x, y: this.mode.y});
-          // this.item = bounds;
+        if (this.mode.action.toString() === "scale") {
+          this.scaleBox([x_mouse_mov, y_mouse_mov]);
           this.setCropThrottle();
         }
       }
     },
-    scaleBox(bounds, delta, scaleMode = { x: this.mode.x, y: this.mode.y }) {
-      delta[1] = delta[0] * (this.appInfo.item.height / this.appInfo.item.width); //lock aspect ratio
-      if (this.centerScale) {
-        delta[1] = delta[1] / 2;
-        delta[0] = delta[0] / 2;
-        if (scaleMode.x == "right") {
-          delta[0] = -delta[0];
-          delta[1] = -delta[1];
-        }
+    scaleBox(delta, scaleMode = {x: this.mode.x, y: this.mode.y}) {
+      // As images are generally more wide than tall, we only use horizontal mouse movement.
+      // This is purely for user experience.
+      delta[1] = delta[0] * (this.appInfo.item.height / this.appInfo.item.width);
 
-        this.item.left = Math.min(this.item.left + delta[0], this.frame.left);
-        this.item.right  = Math.min(this.item.right + delta[0], this.frame.right);
-        this.item.bottom = Math.min(this.item.bottom + delta[1], this.frame.bottom);
-        this.item.top  = Math.min(this.item.top + delta[1], this.frame.top);
-      } else {
-        if (scaleMode.x == "right") {
-          bounds.right = bounds.right - delta[0];
-          if (scaleMode.y == "bottom") {
-            bounds.bottom = bounds.bottom - delta[1];
-          } else if (scaleMode.y == "top") {
-            bounds.top = bounds.top - delta[1];
-          }
-        } else if (scaleMode.x == "left") {
-          bounds.left = bounds.left + delta[0];
-          if (scaleMode.y == "bottom") {
-            bounds.bottom = bounds.bottom + delta[1];
-          } else if (scaleMode.y == "top") {
-            bounds.top = bounds.top + delta[1];
-          }
-        }
+      // Invert delta depending on corner that is used
+      if (scaleMode.x.toString() === "right") {
+        delta[0] = -delta[0];
+        delta[1] = -delta[1];
       }
 
-      return bounds;
+      // Don't allow the delta to be bigger than the space between item and frame, so it is never smaller than the frame
+      // Because allowing it to be smaller than the frame is not allowed in the OBS api.
+      delta[0] = Math.min(this.frame.left - this.item.left, delta[0]);
+      delta[0] = Math.min(this.frame.right - this.item.right, delta[0])
+      delta[1] = Math.min(this.frame.top - this.item.top, delta[1]);
+      delta[1] = Math.min(this.frame.bottom - this.item.bottom, delta[1])
+
+      // Ensure ratio is correct for restricted values.
+      delta[1] = Math.min(delta[0] * (this.appInfo.item.height / this.appInfo.item.width), delta[1]);
+      delta[0] = Math.min(delta[1] / (this.appInfo.item.height / this.appInfo.item.width), delta[0]);
+
+      // Set item sizes depending on scale mode.
+      if (scaleMode.x.toString() === "right" || this.centerScale) {
+        this.item.right += delta[0];
+      }
+      if (scaleMode.x.toString() === "left" || this.centerScale) {
+        this.item.left +=  delta[0];
+      }
+      if (scaleMode.y.toString() === "bottom" || this.centerScale) {
+        this.item.bottom +=  delta[1];
+      }
+      if (scaleMode.y.toString() === "top" || this.centerScale) {
+        this.item.top +=  delta[1];
+      }
     },
-    checkBounds(bounds, scaleMode) {
-      let correction = [0, 0];
-      if (bounds.left > this.frame.left) {
-        correction[0] = this.frame.left - bounds.left;
-      } else if (bounds.right > this.frame.right) {
-        correction[0] = -(this.frame.right - bounds.right);
-      }
-      if (bounds.top > this.frame.top) {
-        correction[1] = this.frame.top - bounds.top;
-      } else if (bounds.bottom > this.frame.bottom) {
-        correction[1] = -(this.frame.bottom - bounds.bottom);
-      }
-      if (!scaleMode) {
-        bounds = {
-          top: bounds.top + correction[1],
-          right: bounds.right - correction[0],
-          bottom: bounds.bottom - correction[1],
-          left: bounds.left + correction[0],
-        };
-      } else {
-        if (Math.abs(correction[1]) > Math.abs(correction[0])) {
-          correction[0] = correction[1] / (this.appInfo.item.height / this.appInfo.item.width);
-          if ((scaleMode.x == "right" && scaleMode.y == "top") || (scaleMode.x == "left" && scaleMode.y == "bottom")) {
-            correction[0] = -correction[0];
-          }
-        }
-        bounds = this.scaleBox(bounds, correction, scaleMode);
-      }
-      return bounds;
-    },
-
     handleKeydown(e) {
       if (e.key == "Control") {
         this.slow = true;
@@ -331,7 +296,12 @@ let app = new Vue({
       }
       obsItem.scaleX = Math.abs(obsItem.scaleX);
       obsItem.scaleY = Math.abs(obsItem.scaleY);
-      let crop = { bottom: obsItem.cropBottom * obsItem.scaleY, left: obsItem.cropLeft * obsItem.scaleX, right: obsItem.cropRight * obsItem.scaleX, top: obsItem.cropTop * obsItem.scaleY };
+      let crop = {
+        bottom: obsItem.cropBottom * obsItem.scaleY,
+        left: obsItem.cropLeft * obsItem.scaleX,
+        right: obsItem.cropRight * obsItem.scaleX,
+        top: obsItem.cropTop * obsItem.scaleY
+      };
 
       this.appInfo.frame = {
         width: obsItem.width - crop.left - crop.right,
@@ -346,7 +316,7 @@ let app = new Vue({
       //Horizontal Flip
       if (obsItem.width < 0) {
         this.appInfo.frame.flipHorz = true;
-        crop = { bottom: crop.bottom, left: crop.right, right: crop.left, top: crop.top };
+        crop = {bottom: crop.bottom, left: crop.right, right: crop.left, top: crop.top};
         this.appInfo.frame.width = Math.abs(obsItem.width) - crop.left - crop.right;
         if (obsItem.alignment % 4 == ALIGNRIGHT) {
           obsItem.alignment--;
@@ -354,7 +324,7 @@ let app = new Vue({
           obsItem.alignment++;
         }
       }
-      let alignmentPosition = { x: 0, y: 0 };
+      let alignmentPosition = {x: 0, y: 0};
       if (obsItem.alignment < ALIGNTOP) {
         alignmentPosition.y = this.appInfo.frame.height / 2;
         this.appInfo.frame.alignY = "center";
@@ -452,7 +422,7 @@ let app = new Vue({
         bottom: this.item.bottom,
         left: this.item.left,
       };
-      bounds = this.setScale(bounds, percent, { x: "right", y: "bottom" });
+      bounds = this.setScale(bounds, percent, {x: "right", y: "bottom"});
       this.item = bounds;
       this.setCropThrottle();
     },
@@ -464,7 +434,7 @@ let app = new Vue({
       let delta = [(newItemWidth - itemWidth) / 2, (newItemHeight - itemHeight) / 2];
 
       bounds = this.scaleBox(bounds, delta, scaleMode);
-      bounds = this.scaleBox(bounds, [-delta[0], delta[1]], { x: "left", y: "top" });
+      bounds = this.scaleBox(bounds, [-delta[0], delta[1]], {x: "left", y: "top"});
       bounds = this.checkBounds(bounds);
 
       return bounds;
@@ -475,13 +445,13 @@ let app = new Vue({
       let itemList = await Promise.all(
         scenes.map(async (scene) => {
           let sceneInfo = scene;
-          let sceneItems = (await obs.call("GetSceneItemList", { sceneName: sceneInfo.sceneName })).sceneItems.reverse();
+          let sceneItems = (await obs.call("GetSceneItemList", {sceneName: sceneInfo.sceneName})).sceneItems.reverse();
           sceneInfo.items = [];
           for (const item of sceneItems) {
             item.sceneName = sceneInfo.sceneName;
             sceneInfo.items.push(item);
             if (item.isGroup) {
-              let itemChildren = (await obs.call("GetGroupSceneItemList", { sceneName: item.sourceName })).sceneItems.reverse();
+              let itemChildren = (await obs.call("GetGroupSceneItemList", {sceneName: item.sourceName})).sceneItems.reverse();
               sceneInfo.items = [
                 ...sceneInfo.items,
                 ...itemChildren.map((child) => {
@@ -521,7 +491,7 @@ let app = new Vue({
     async socketLogin() {
       if (this.socketserver && this.socketpassword) {
         try {
-          await obs.connect(this.socketserver, this.socketpassword, { eventSubscriptions: OBSWebSocket.EventSubscription.All | OBSWebSocket.EventSubscription.SceneItemTransformChanged });
+          await obs.connect(this.socketserver, this.socketpassword, {eventSubscriptions: OBSWebSocket.EventSubscription.All | OBSWebSocket.EventSubscription.SceneItemTransformChanged});
           this.socketConnected = true;
           localStorage.setItem("nifty-obswebsocket-server", this.socketserver);
           localStorage.setItem("nifty-obswebsocket-password", this.socketpassword);
