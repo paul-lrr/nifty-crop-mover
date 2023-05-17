@@ -438,16 +438,21 @@ let app = new Vue({
       percent = percent / 100;
       console.log(percent)
 
-      // Calculate how much scaling is needed for the resize
+      // Try to rescale in a centered way
       let delta = this.calculateResize(percent)
-      this.scaleBox(delta, {x: "right", y: "bottom"});
-      this.scaleBox([-delta[0], -delta[1]], {x: "left", y: "top"});
+      this.scaleBox([delta[0] / 2, delta[1] / 2], {x: "right", y: "bottom"});
+      this.scaleBox([-delta[0] / 2, -delta[1] / 2], {x: "left", y: "top"});
 
-      // Recalculate how much movement is still needed for the resize, but now using the other combinations.
-      // This is needed when becoming smaller and intersecting with the frame during the scaling.
+      // If making smaller, the frame might intersect the box,
+      // in this case try to pull each corner in turn to be the correct siee
       delta = this.calculateResize(percent)
       this.scaleBox([delta[0], -delta[1]], {x: "right", y: "top"});
+      delta = this.calculateResize(percent)
       this.scaleBox([-delta[0], -delta[1]], {x: "left", y: "bottom"});
+      delta = this.calculateResize(percent)
+      this.scaleBox([delta[0], delta[1]], {x: "right", y: "bottom"});
+      delta = this.calculateResize(percent)
+      this.scaleBox([-delta[0], -delta[1]], {x: "left", y: "top"});
 
       this.setCropThrottle();
     },
@@ -457,7 +462,7 @@ let app = new Vue({
       let newItemWidth = (this.appInfo.item.nativeWidth * percent) / this.stageRatio;
       let newItemHeight = (newItemWidth * this.appInfo.item.height) / this.appInfo.item.width;
 
-      return [(newItemWidth - itemWidth) / 2, (newItemHeight - itemHeight) / 2];
+      return [(newItemWidth - itemWidth), (newItemHeight - itemHeight)];
     },
     async getAllItemsobs() {
       let scenes = (await obs.call("GetSceneList")).scenes.reverse();
